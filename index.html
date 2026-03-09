@@ -157,42 +157,52 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
 /* WATERMARK */
 #map-watermark{
   position:absolute;
-  bottom:32px;
-  left:12px;
+  bottom:36px;
+  left:50%;
+  transform:translateX(-50%);
   z-index:999;
   pointer-events:none;
   display:flex;
   align-items:center;
   gap:8px;
-  background:rgba(13,17,23,0.45);
-  backdrop-filter:blur(4px);
-  border:1px solid rgba(88,166,255,0.2);
-  border-radius:8px;
-  padding:6px 12px;
-  opacity:0.7;
+  background:rgba(10,12,16,0.55);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  border:1px solid rgba(184,134,11,0.35);
+  border-radius:20px;
+  padding:5px 16px 5px 10px;
+  opacity:0.55;
   transition:opacity .3s;
 }
-#map-watermark:hover{opacity:1}
+#map-watermark:hover{opacity:0.9}
 #map-watermark .wm-icon{
-  width:22px;height:22px;
-  background:linear-gradient(135deg,#1f6feb,#58a6ff);
+  width:20px;height:20px;
+  background:linear-gradient(135deg,#b8860b,#ffd700);
   border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-size:11px;
+  font-size:10px;
   flex-shrink:0;
+  box-shadow:0 0 6px rgba(255,215,0,0.4);
 }
 #map-watermark .wm-text{
-  font-size:10px;
-  color:rgba(230,237,243,0.85);
   font-family:'Segoe UI',Tahoma,sans-serif;
-  letter-spacing:.5px;
-  line-height:1.4;
+  line-height:1.35;
+}
+#map-watermark .wm-label{
+  font-size:8px;
+  color:rgba(184,134,11,0.8);
+  letter-spacing:.6px;
+  text-transform:uppercase;
 }
 #map-watermark .wm-name{
   font-size:11px;
   font-weight:700;
-  color:#58a6ff;
-  letter-spacing:.8px;
+  letter-spacing:1px;
+  background:linear-gradient(90deg,#b8860b,#ffd700,#daa520);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  filter:drop-shadow(0 0 3px rgba(255,215,0,0.3));
 }
 
 </style>
@@ -259,7 +269,7 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
   <div id="map-watermark">
     <div class="wm-icon">✦</div>
     <div class="wm-text">
-      <div style="color:rgba(139,148,158,0.9);font-size:9px">Developed By</div>
+      <div class="wm-label">Developed By</div>
       <div class="wm-name">Rakan Alharbi</div>
     </div>
   </div>
@@ -325,14 +335,16 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
         <button onclick="document.getElementById('chpass-modal').classList.add('show');document.getElementById('cp-current').focus()" style="background:#21262d;border:1px solid #30363d;color:#e6edf3;border-radius:6px;padding:9px;width:100%;cursor:pointer;font-size:12px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
           🔑 تغيير كلمة مرور المدير
         </button>
-        <button onclick="clearAllData()" style="background:rgba(248,81,73,0.1);border:1px solid #f85149;color:#f85149;border-radius:6px;padding:9px;width:100%;cursor:pointer;font-size:12px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
-          🗑️ مسح جميع البيانات
-        </button>
+        <div style="display:flex;gap:6px">
+          <button onclick="clearAllData()" style="flex:1;background:rgba(248,81,73,0.1);border:1px solid #f85149;color:#f85149;border-radius:6px;padding:9px;cursor:pointer;font-size:11px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:4px">
+            🗑️ مسح الكل
+          </button>
+          <button onclick="restoreEmbeddedData()" style="flex:1;background:rgba(88,166,255,0.1);border:1px solid #58a6ff;color:#58a6ff;border-radius:6px;padding:9px;cursor:pointer;font-size:11px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:4px">
+            ↺ استعادة
+          </button>
+        </div>
       </div>
-      <div style="padding:10px 14px 16px;text-align:center;border-top:1px solid #21262d;margin-top:4px">
-        <div style="font-size:10px;color:rgba(139,148,158,0.6);letter-spacing:.4px;margin-bottom:2px">Developed By</div>
-        <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;background:linear-gradient(90deg,#b8860b,#ffd700,#daa520,#ffd700,#b8860b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 4px rgba(255,215,0,0.3))">✦ Rakan Alharbi ✦</div>
-      </div>
+
     </div>
   </div>
 </div>
@@ -568,18 +580,30 @@ function savePassword(){
 
 // ─── CLEAR DATA ───────────────────────────────────────────────────────────────
 function clearAllData(){
-  if(!confirm('⚠️ هل تريد مسح جميع البيانات والعودة للبيانات الأساسية؟\nسيتم حذف جميع الملفات المحفوظة.')) return;
+  if(!confirm('⚠️ هل تريد مسح جميع الملفات المرفوعة والإحداثيات؟\nسيتم الرجوع للبيانات الأساسية.')) return;
+  // مسح النقاط من الخريطة فوراً
+  clusterLayer.clearLayers();
   fileStore=[];
   activeFileIdx=-1;
   saveFileStore();
   renderFileHistory();
+  allData=[];
+  document.getElementById('total-count').textContent='0';
+  document.getElementById('shown-count').textContent='0';
+  const s=document.getElementById('upload-status');
+  s.style.display='block';s.style.color='#d2a81e';
+  s.textContent='🗑️ تم مسح جميع البيانات والإحداثيات';
+}
+
+function restoreEmbeddedData(){
+  clusterLayer.clearLayers();
   decompress(DATA_B64).then(json=>{
     allData=JSON.parse(json);
     document.getElementById('total-count').textContent=allData.length.toLocaleString('ar');
     resetFilters();
     const s=document.getElementById('upload-status');
-    s.style.display='block';s.style.color='#d2a81e';
-    s.textContent='✅ تم مسح البيانات والرجوع للبيانات الأساسية';
+    s.style.display='block';s.style.color='#3fb950';
+    s.textContent='✅ تم استعادة البيانات الأساسية';
   });
 }
 
