@@ -124,6 +124,35 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
 .popup-coords-text{font-size:11px;color:#8b949e;font-family:monospace}
 .gmaps-btn{background:#1f6feb;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px;font-family:inherit;display:flex;align-items:center;gap:4px;text-decoration:none;white-space:nowrap}
 .gmaps-btn:hover{background:#388bfd}
+
+/* FILE HISTORY */
+.file-entry{background:#21262d;border:1px solid #30363d;border-radius:6px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.file-entry.active-file{border-color:#3fb950}
+.file-info{flex:1;min-width:0}
+.file-name{font-size:12px;color:#e6edf3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-meta{font-size:10px;color:#8b949e;margin-top:2px}
+.file-badge{font-size:10px;background:rgba(63,185,80,.2);color:#3fb950;border:1px solid #3fb950;border-radius:10px;padding:1px 7px;white-space:nowrap}
+.file-actions{display:flex;gap:4px}
+.file-btn{background:none;border:1px solid #30363d;color:#8b949e;border-radius:4px;padding:3px 7px;cursor:pointer;font-size:11px;font-family:inherit}
+.file-btn:hover{background:#30363d;color:#e6edf3}
+.file-btn.del{border-color:#f85149;color:#f85149}
+.file-btn.del:hover{background:rgba(248,81,73,.15)}
+.file-btn.load{border-color:#58a6ff;color:#58a6ff}
+.file-btn.load:hover{background:rgba(88,166,255,.15)}
+
+/* CHANGE PASSWORD MODAL */
+#chpass-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;align-items:center;justify-content:center}
+#chpass-modal.show{display:flex}
+#chpass-box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;width:290px}
+#chpass-box h3{color:#58a6ff;margin-bottom:16px;font-size:15px;text-align:center}
+.chpass-field{margin-bottom:10px}
+.chpass-field label{font-size:11px;color:#8b949e;display:block;margin-bottom:4px}
+.chpass-field input{width:100%;background:#21262d;border:1px solid #30363d;color:#e6edf3;border-radius:6px;padding:8px;font-size:13px;font-family:inherit;outline:none}
+.chpass-field input:focus{border-color:#58a6ff}
+#chpass-save{background:#238636;color:#fff;border:none;border-radius:6px;padding:9px;width:100%;cursor:pointer;font-size:13px;font-family:inherit;font-weight:600;margin-top:4px}
+#chpass-save:hover{background:#2ea043}
+#chpass-msg{font-size:12px;margin-top:8px;text-align:center}
+#chpass-cancel{background:none;border:none;color:#8b949e;cursor:pointer;font-size:12px;margin-top:8px;font-family:inherit;display:block;width:100%;text-align:center}
 </style>
 </head>
 <body>
@@ -132,6 +161,20 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
   <div class="spinner"></div>
   <p id="loading-text">جاري تحميل البيانات...</p>
   <div id="loading-bar"><div id="loading-fill"></div></div>
+</div>
+
+
+<!-- Change Password Modal -->
+<div id="chpass-modal">
+  <div id="chpass-box">
+    <h3>🔑 تغيير كلمة المرور</h3>
+    <div class="chpass-field"><label>كلمة المرور الحالية</label><input type="password" id="cp-current" placeholder="أدخل كلمة المرور الحالية"></div>
+    <div class="chpass-field"><label>كلمة المرور الجديدة</label><input type="password" id="cp-new" placeholder="أدخل كلمة المرور الجديدة"></div>
+    <div class="chpass-field"><label>تأكيد كلمة المرور الجديدة</label><input type="password" id="cp-confirm" placeholder="أعد كتابة كلمة المرور الجديدة"></div>
+    <button id="chpass-save" onclick="savePassword()">✅ حفظ كلمة المرور</button>
+    <div id="chpass-msg"></div>
+    <button id="chpass-cancel" onclick="document.getElementById('chpass-modal').classList.remove('show')">إلغاء</button>
+  </div>
 </div>
 
 <!-- Admin Login Modal -->
@@ -213,14 +256,26 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
 
     <!-- ADMIN ONLY SECTION -->
     <div id="admin-section">
-      <div class="filter-label" style="margin-bottom:8px;padding:0 2px">🔄 تحديث البيانات (صلاحية المدير)</div>
-      <div id="upload-box" onclick="document.getElementById('file-input').click()">
-        <div class="icon">📂</div>
-        <div style="font-size:12px;color:#e6edf3;margin-top:4px">ارفع ملف Excel جديد</div>
-        <p>يدعم .xlsx — يتم تحديث الخريطة فوراً</p>
+      <div style="padding:12px 14px;border-top:1px solid #30363d">
+        <div class="filter-label" style="margin-bottom:8px">🔄 رفع ملف Excel جديد</div>
+        <div id="upload-box" onclick="document.getElementById('file-input').click()">
+          <div class="icon">📂</div>
+          <div style="font-size:12px;color:#e6edf3;margin-top:4px">اسحب أو اضغط لرفع ملف</div>
+          <p>يدعم .xlsx — يتم تحديث الخريطة فوراً</p>
+        </div>
+        <input type="file" id="file-input" accept=".xlsx" onchange="handleUpload(event)">
+        <div id="upload-status"></div>
       </div>
-      <input type="file" id="file-input" accept=".xlsx" onchange="handleUpload(event)">
-      <div id="upload-status"></div>
+      <div style="padding:0 14px 12px">
+        <div class="filter-label" style="margin-bottom:8px">📁 سجل الملفات</div>
+        <div id="file-history"></div>
+        <div id="no-files" style="font-size:12px;color:#8b949e;text-align:center;padding:8px 0">لا توجد ملفات محفوظة بعد</div>
+      </div>
+      <div style="padding:0 14px 14px;border-top:1px solid #21262d;padding-top:12px">
+        <button onclick="document.getElementById('chpass-modal').classList.add('show')" style="background:#21262d;border:1px solid #30363d;color:#e6edf3;border-radius:6px;padding:8px;width:100%;cursor:pointer;font-size:12px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+          🔑 تغيير كلمة المرور
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -389,6 +444,10 @@ function toggleSidebar(){
 }
 
 // ─── ADMIN ───────────────────────────────────────────────────────────────────
+let adminPass = ADMIN_PASS;
+// Load saved password from localStorage if exists
+try { const sp = localStorage.getItem('map_admin_pass'); if(sp) adminPass = sp; } catch(e){}
+
 function openAdminModal(){
   if(isAdmin){document.getElementById('admin-section').style.display='block';toggleSidebar();return;}
   document.getElementById('admin-modal').classList.add('show');
@@ -396,51 +455,155 @@ function openAdminModal(){
   document.getElementById('admin-err').style.display='none';
   setTimeout(()=>document.getElementById('admin-pass-input').focus(),100);
 }
-
 function closeAdminModal(){document.getElementById('admin-modal').classList.remove('show');}
 
 function doLogin(){
   const pass=document.getElementById('admin-pass-input').value;
-  if(pass===ADMIN_PASS){
+  if(pass===adminPass){
     isAdmin=true;
     closeAdminModal();
     document.getElementById('admin-section').style.display='block';
     document.getElementById('admin-btn').textContent='✅ مدير';
     document.getElementById('admin-btn').classList.add('green');
+    renderFileHistory();
     toggleSidebar();
   } else {
     document.getElementById('admin-err').style.display='block';
     document.getElementById('admin-pass-input').value='';
+    document.getElementById('admin-pass-input').focus();
   }
 }
 
+// ─── CHANGE PASSWORD ─────────────────────────────────────────────────────────
+function savePassword(){
+  const cur=document.getElementById('cp-current').value;
+  const nw=document.getElementById('cp-new').value;
+  const cf=document.getElementById('cp-confirm').value;
+  const msg=document.getElementById('chpass-msg');
+  if(cur!==adminPass){msg.style.color='#f85149';msg.textContent='❌ كلمة المرور الحالية غير صحيحة';return;}
+  if(nw.length<4){msg.style.color='#f85149';msg.textContent='❌ كلمة المرور يجب أن تكون 4 أحرف على الأقل';return;}
+  if(nw!==cf){msg.style.color='#f85149';msg.textContent='❌ كلمة المرور الجديدة غير متطابقة';return;}
+  adminPass=nw;
+  try{localStorage.setItem('map_admin_pass',nw);}catch(e){}
+  msg.style.color='#3fb950';msg.textContent='✅ تم تغيير كلمة المرور بنجاح';
+  document.getElementById('cp-current').value='';
+  document.getElementById('cp-new').value='';
+  document.getElementById('cp-confirm').value='';
+  setTimeout(()=>{document.getElementById('chpass-modal').classList.remove('show');msg.textContent='';},1500);
+}
+
+// ─── FILE HISTORY ─────────────────────────────────────────────────────────────
+let fileStore = []; // [{name, date, count, data, active}]
+let activeFileIdx = -1; // -1 = embedded data
+
+try {
+  const saved = localStorage.getItem('map_file_store');
+  if(saved) fileStore = JSON.parse(saved);
+} catch(e){}
+
+function saveFileStore(){
+  try{localStorage.setItem('map_file_store', JSON.stringify(fileStore));}catch(e){}
+}
+
+function renderFileHistory(){
+  const container = document.getElementById('file-history');
+  const noFiles = document.getElementById('no-files');
+  if(!container) return;
+  container.innerHTML='';
+  if(fileStore.length===0){noFiles.style.display='block';return;}
+  noFiles.style.display='none';
+  fileStore.forEach((f,i)=>{
+    const isActive = i===activeFileIdx;
+    const div=document.createElement('div');
+    div.className='file-entry'+(isActive?' active-file':'');
+    div.innerHTML=`
+      <div class="file-info">
+        <div class="file-name" title="${f.name}">${f.name}</div>
+        <div class="file-meta">${f.date} • ${f.count.toLocaleString('ar')} بلاغ</div>
+      </div>
+      ${isActive?'<span class="file-badge">نشط</span>':''}
+      <div class="file-actions">
+        ${!isActive?`<button class="file-btn load" onclick="loadFile(${i})">تحميل</button>`:''}
+        <button class="file-btn del" onclick="deleteFile(${i})">حذف</button>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+function loadFile(idx){
+  if(idx<0||idx>=fileStore.length) return;
+  activeFileIdx=idx;
+  allData=fileStore[idx].data;
+  document.getElementById('total-count').textContent=allData.length.toLocaleString('ar');
+  resetFilters();
+  renderFileHistory();
+  const s=document.getElementById('upload-status');
+  s.style.display='block';s.style.color='#3fb950';
+  s.textContent=`✅ تم تحميل "${fileStore[idx].name}"`;
+}
+
+function deleteFile(idx){
+  const fname=fileStore[idx].name;
+  if(!confirm(`هل تريد حذف الملف "${fname}"؟`)) return;
+  const wasActive=(idx===activeFileIdx);
+  fileStore.splice(idx,1);
+  saveFileStore();
+  if(wasActive){
+    activeFileIdx=-1;
+    // revert to embedded data
+    decompress(DATA_B64).then(json=>{
+      allData=JSON.parse(json);
+      document.getElementById('total-count').textContent=allData.length.toLocaleString('ar');
+      resetFilters();
+    });
+    const s=document.getElementById('upload-status');
+    s.style.display='block';s.style.color='#8b949e';s.textContent='⚠️ تم الرجوع للبيانات الأساسية';
+  } else if(idx<activeFileIdx){
+    activeFileIdx--;
+  }
+  renderFileHistory();
+}
+
 // ─── UPLOAD ──────────────────────────────────────────────────────────────────
+function parseExcelRows(rows){
+  const h=rows[0];
+  const xi=h.indexOf('X'),yi=h.indexOf('Y');
+  const data=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!r[xi]||!r[yi]) continue;
+    const created=r[1]?String(r[1]):'';
+    let year='';
+    try{const p=created.split(' ')[0].split('/');if(p.length===3){let yr=parseInt(p[2]);if(yr<100)yr+=2000;year=String(yr);}}catch(e){}
+    let closed='';
+    try{if(r[3]){const p=String(r[3]).split(' ')[0].split('/');if(p.length===3){const[m,d,yr]=p;const y2=parseInt(yr)<100?parseInt(yr)+2000:parseInt(yr);closed=`${y2}-${parseInt(m).toString().padStart(2,'0')}-${parseInt(d).toString().padStart(2,'0')}`;}}}catch(e){}
+    data.push([r[0]||'',r[4]||'',r[6]||'',r[10]||'',r[7]||'',String(r[22]||'').trim(),closed,parseFloat(r[xi]),parseFloat(r[yi]),r[14]||'',year,r[12]||'',String(r[15]||'').substring(0,80)]);
+  }
+  return data;
+}
+
 function handleUpload(event){
   const file=event.target.files[0]; if(!file) return;
+  event.target.value='';
   const status=document.getElementById('upload-status');
-  status.style.display='block'; status.style.color='#58a6ff'; status.textContent='⏳ جاري قراءة الملف...';
+  status.style.display='block';status.style.color='#58a6ff';status.textContent='⏳ جاري قراءة الملف...';
   const reader=new FileReader();
   reader.onload=function(e){
     try{
       const wb=XLSX.read(e.target.result,{type:'binary'});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{header:1});
-      const h=rows[0];
-      const xi=h.indexOf('X'),yi=h.indexOf('Y');
-      const newData=[];
-      for(let i=1;i<rows.length;i++){
-        const r=rows[i]; if(!r[xi]||!r[yi]) continue;
-        const created=r[1]?String(r[1]):'';
-        let year='';
-        try{const p=created.split(' ')[0].split('/');if(p.length===3){let yr=parseInt(p[2]);if(yr<100)yr+=2000;year=String(yr);}}catch(e){}
-        let closed=''; try{if(r[3]){const p=String(r[3]).split(' ')[0].split('/');if(p.length===3){const[m,d,yr]=p;const y2=parseInt(yr)<100?parseInt(yr)+2000:parseInt(yr);closed=`${y2}-${parseInt(m).toString().padStart(2,'0')}-${parseInt(d).toString().padStart(2,'0')}`;}}}catch(e){}
-        newData.push([r[0]||'',r[4]||'',r[6]||'',r[10]||'',r[7]||'',String(r[22]||'').trim(),closed,parseFloat(r[xi]),parseFloat(r[yi]),r[14]||'',year,r[12]||'',String(r[15]||'').substring(0,80)]);
-      }
+      const newData=parseExcelRows(rows);
+      const now=new Date().toLocaleDateString('ar-SA');
+      const entry={name:file.name,date:now,count:newData.length,data:newData};
+      fileStore.push(entry);
+      activeFileIdx=fileStore.length-1;
+      saveFileStore();
       allData=newData;
       document.getElementById('total-count').textContent=allData.length.toLocaleString('ar');
-      renderMarkers(allData);
+      resetFilters();
+      renderFileHistory();
       status.style.color='#3fb950';
-      status.textContent=`✅ تم تحميل ${newData.length.toLocaleString('ar')} بلاغ`;
+      status.textContent=`✅ تم رفع "${file.name}" — ${newData.length.toLocaleString('ar')} بلاغ`;
     }catch(err){status.style.color='#f85149';status.textContent='❌ خطأ: '+err.message;}
   };
   reader.readAsBinaryString(file);
