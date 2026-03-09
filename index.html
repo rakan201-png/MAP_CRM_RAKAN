@@ -157,22 +157,23 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
 /* WATERMARK */
 #map-watermark{
   position:absolute;
-  bottom:36px;
-  left:50%;
-  transform:translateX(-50%);
+  bottom:30px;
+  right:16px;
   z-index:999;
   pointer-events:none;
   display:flex;
   align-items:center;
   gap:8px;
-  background:rgba(10,12,16,0.55);
-  backdrop-filter:blur(6px);
-  -webkit-backdrop-filter:blur(6px);
-  border:1px solid rgba(184,134,11,0.35);
-  border-radius:20px;
-  padding:5px 16px 5px 10px;
-  opacity:0.55;
-  transition:opacity .3s;
+  background:rgba(10,12,16,0.60);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(184,134,11,0.4);
+  border-left:3px solid #ffd700;
+  border-radius:10px;
+  padding:7px 14px 7px 10px;
+  opacity:0.60;
+  transition:opacity .35s;
+  box-shadow:0 2px 16px rgba(0,0,0,0.4), 0 0 12px rgba(255,215,0,0.06);
 }
 #map-watermark:hover{opacity:0.9}
 #map-watermark .wm-icon{
