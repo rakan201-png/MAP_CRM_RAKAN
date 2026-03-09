@@ -122,8 +122,8 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
 .badge.عادي{background:rgba(63,185,80,.2);color:#3fb950;border:1px solid #3fb950}
 .popup-coords{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid #30363d}
 .popup-coords-text{font-size:11px;color:#8b949e;font-family:monospace}
-.gmaps-btn{background:#1f6feb;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px;font-family:inherit;display:flex;align-items:center;gap:4px;text-decoration:none;white-space:nowrap}
-.gmaps-btn:hover{background:#388bfd}
+.gmaps-btn{background:#1565c0;color:#ffffff;border:2px solid #42a5f5;border-radius:7px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;display:flex;align-items:center;gap:5px;text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(21,101,192,.5);letter-spacing:.3px}
+.gmaps-btn:hover{background:#1976d2;border-color:#64b5f6;box-shadow:0 3px 12px rgba(21,101,192,.7)}
 
 /* FILE HISTORY */
 .file-entry{background:#21262d;border:1px solid #30363d;border-radius:6px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -153,6 +153,48 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
 #chpass-save:hover{background:#2ea043}
 #chpass-msg{font-size:12px;margin-top:8px;text-align:center}
 #chpass-cancel{background:none;border:none;color:#8b949e;cursor:pointer;font-size:12px;margin-top:8px;font-family:inherit;display:block;width:100%;text-align:center}
+
+/* WATERMARK */
+#map-watermark{
+  position:absolute;
+  bottom:32px;
+  left:12px;
+  z-index:999;
+  pointer-events:none;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:rgba(13,17,23,0.45);
+  backdrop-filter:blur(4px);
+  border:1px solid rgba(88,166,255,0.2);
+  border-radius:8px;
+  padding:6px 12px;
+  opacity:0.7;
+  transition:opacity .3s;
+}
+#map-watermark:hover{opacity:1}
+#map-watermark .wm-icon{
+  width:22px;height:22px;
+  background:linear-gradient(135deg,#1f6feb,#58a6ff);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;
+  flex-shrink:0;
+}
+#map-watermark .wm-text{
+  font-size:10px;
+  color:rgba(230,237,243,0.85);
+  font-family:'Segoe UI',Tahoma,sans-serif;
+  letter-spacing:.5px;
+  line-height:1.4;
+}
+#map-watermark .wm-name{
+  font-size:11px;
+  font-weight:700;
+  color:#58a6ff;
+  letter-spacing:.8px;
+}
+
 </style>
 </head>
 <body>
@@ -207,12 +249,20 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
       <button class="layer-btn" data-layer="street" onclick="switchLayer(this)">🗺️ شوارع</button>
     </div>
     <button class="icon-btn" id="admin-btn" onclick="openAdminModal()">🔐 مدير</button>
+    <button class="icon-btn" id="logout-btn" onclick="adminLogout()" style="display:none;background:rgba(248,81,73,0.15);border-color:#f85149;color:#f85149">🚪 خروج</button>
     <button class="icon-btn" onclick="toggleSidebar()">⚙️ فلتر</button>
   </div>
 </div>
 
 <div id="main">
   <div id="map"></div>
+  <div id="map-watermark">
+    <div class="wm-icon">✦</div>
+    <div class="wm-text">
+      <div style="color:rgba(139,148,158,0.9);font-size:9px">Developed By</div>
+      <div class="wm-name">Rakan Alharbi</div>
+    </div>
+  </div>
   <div id="overlay" onclick="toggleSidebar()"></div>
   <div id="sidebar">
     <div id="sidebar-header">
@@ -271,10 +321,17 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
         <div id="file-history"></div>
         <div id="no-files" style="font-size:12px;color:#8b949e;text-align:center;padding:8px 0">لا توجد ملفات محفوظة بعد</div>
       </div>
-      <div style="padding:0 14px 14px;border-top:1px solid #21262d;padding-top:12px">
-        <button onclick="document.getElementById('chpass-modal').classList.add('show')" style="background:#21262d;border:1px solid #30363d;color:#e6edf3;border-radius:6px;padding:8px;width:100%;cursor:pointer;font-size:12px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
-          🔑 تغيير كلمة المرور
+      <div style="padding:0 14px 14px;border-top:1px solid #21262d;padding-top:12px;display:flex;flex-direction:column;gap:8px">
+        <button onclick="document.getElementById('chpass-modal').classList.add('show');document.getElementById('cp-current').focus()" style="background:#21262d;border:1px solid #30363d;color:#e6edf3;border-radius:6px;padding:9px;width:100%;cursor:pointer;font-size:12px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+          🔑 تغيير كلمة مرور المدير
         </button>
+        <button onclick="clearAllData()" style="background:rgba(248,81,73,0.1);border:1px solid #f85149;color:#f85149;border-radius:6px;padding:9px;width:100%;cursor:pointer;font-size:12px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+          🗑️ مسح جميع البيانات
+        </button>
+      </div>
+      <div style="padding:10px 14px 16px;text-align:center;border-top:1px solid #21262d;margin-top:4px">
+        <div style="font-size:10px;color:rgba(139,148,158,0.6);letter-spacing:.4px;margin-bottom:2px">Developed By</div>
+        <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;background:linear-gradient(90deg,#b8860b,#ffd700,#daa520,#ffd700,#b8860b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 4px rgba(255,215,0,0.3))">✦ Rakan Alharbi ✦</div>
       </div>
     </div>
   </div>
@@ -448,6 +505,16 @@ let adminPass = ADMIN_PASS;
 // Load saved password from localStorage if exists
 try { const sp = localStorage.getItem('map_admin_pass'); if(sp) adminPass = sp; } catch(e){}
 
+function adminLogout(){
+  isAdmin=false;
+  document.getElementById('admin-section').style.display='none';
+  document.getElementById('admin-btn').textContent='🔐 مدير';
+  document.getElementById('admin-btn').classList.remove('green');
+  document.getElementById('logout-btn').style.display='none';
+  const sb=document.getElementById('sidebar');
+  if(sb.classList.contains('open')) toggleSidebar();
+}
+
 function openAdminModal(){
   if(isAdmin){document.getElementById('admin-section').style.display='block';toggleSidebar();return;}
   document.getElementById('admin-modal').classList.add('show');
@@ -465,6 +532,7 @@ function doLogin(){
     document.getElementById('admin-section').style.display='block';
     document.getElementById('admin-btn').textContent='✅ مدير';
     document.getElementById('admin-btn').classList.add('green');
+    document.getElementById('logout-btn').style.display='flex';
     renderFileHistory();
     toggleSidebar();
   } else {
@@ -476,20 +544,43 @@ function doLogin(){
 
 // ─── CHANGE PASSWORD ─────────────────────────────────────────────────────────
 function savePassword(){
-  const cur=document.getElementById('cp-current').value;
-  const nw=document.getElementById('cp-new').value;
-  const cf=document.getElementById('cp-confirm').value;
+  const cur=document.getElementById('cp-current').value.trim();
+  const nw=document.getElementById('cp-new').value.trim();
+  const cf=document.getElementById('cp-confirm').value.trim();
   const msg=document.getElementById('chpass-msg');
+  msg.textContent='';
+  if(!cur||!nw||!cf){msg.style.color='#f85149';msg.textContent='❌ يرجى تعبئة جميع الحقول';return;}
   if(cur!==adminPass){msg.style.color='#f85149';msg.textContent='❌ كلمة المرور الحالية غير صحيحة';return;}
-  if(nw.length<4){msg.style.color='#f85149';msg.textContent='❌ كلمة المرور يجب أن تكون 4 أحرف على الأقل';return;}
+  if(nw.length<4){msg.style.color='#f85149';msg.textContent='❌ يجب أن تكون 4 أحرف على الأقل';return;}
   if(nw!==cf){msg.style.color='#f85149';msg.textContent='❌ كلمة المرور الجديدة غير متطابقة';return;}
   adminPass=nw;
-  try{localStorage.setItem('map_admin_pass',nw);}catch(e){}
-  msg.style.color='#3fb950';msg.textContent='✅ تم تغيير كلمة المرور بنجاح';
+  try{localStorage.setItem('map_admin_pass',adminPass);}catch(e){}
+  msg.style.color='#3fb950';
+  msg.textContent='✅ تم تغيير كلمة المرور بنجاح!';
   document.getElementById('cp-current').value='';
   document.getElementById('cp-new').value='';
   document.getElementById('cp-confirm').value='';
-  setTimeout(()=>{document.getElementById('chpass-modal').classList.remove('show');msg.textContent='';},1500);
+  setTimeout(()=>{
+    document.getElementById('chpass-modal').classList.remove('show');
+    msg.textContent='';
+  },1800);
+}
+
+// ─── CLEAR DATA ───────────────────────────────────────────────────────────────
+function clearAllData(){
+  if(!confirm('⚠️ هل تريد مسح جميع البيانات والعودة للبيانات الأساسية؟\nسيتم حذف جميع الملفات المحفوظة.')) return;
+  fileStore=[];
+  activeFileIdx=-1;
+  saveFileStore();
+  renderFileHistory();
+  decompress(DATA_B64).then(json=>{
+    allData=JSON.parse(json);
+    document.getElementById('total-count').textContent=allData.length.toLocaleString('ar');
+    resetFilters();
+    const s=document.getElementById('upload-status');
+    s.style.display='block';s.style.color='#d2a81e';
+    s.textContent='✅ تم مسح البيانات والرجوع للبيانات الأساسية';
+  });
 }
 
 // ─── FILE HISTORY ─────────────────────────────────────────────────────────────
