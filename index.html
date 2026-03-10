@@ -272,6 +272,48 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
 #locate-btn{border-color:#58a6ff!important;color:#58a6ff!important}
 #locate-btn:hover{background:#1f6feb!important;color:#fff!important}
 #locate-btn.locating{animation:spin .8s linear infinite;color:#3fb950!important;border-color:#3fb950!important}
+
+/* SIDEBAR WATERMARK */
+#sidebar-watermark{
+  margin:10px 14px 4px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:rgba(10,12,16,0.5);
+  border:1px solid rgba(184,134,11,0.3);
+  border-left:3px solid #ffd700;
+  border-radius:8px;
+  padding:7px 12px;
+  opacity:0.65;
+  transition:opacity .3s;
+}
+#sidebar-watermark:hover{opacity:1}
+.swm-icon{
+  width:20px;height:20px;
+  background:linear-gradient(135deg,#b8860b,#ffd700);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;
+  flex-shrink:0;
+  box-shadow:0 0 6px rgba(255,215,0,0.35);
+}
+.swm-text{line-height:1.35}
+.swm-label{
+  font-size:8px;
+  color:rgba(184,134,11,0.8);
+  letter-spacing:.6px;
+  text-transform:uppercase;
+}
+.swm-name{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:1px;
+  background:linear-gradient(90deg,#b8860b,#ffd700,#daa520);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  filter:drop-shadow(0 0 3px rgba(255,215,0,0.25));
+}
 </style>
 </head>
 <body>
@@ -388,6 +430,15 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
     </div>
     <button id="btn-apply" onclick="applyFilters()">✅ تطبيق الفلاتر</button>
     <button id="btn-reset" onclick="resetFilters()">↺ إعادة ضبط</button>
+
+    <!-- SIDEBAR SIGNATURE -->
+    <div id="sidebar-watermark">
+      <div class="swm-icon">✦</div>
+      <div class="swm-text">
+        <div class="swm-label">Developed By</div>
+        <div class="swm-name">Rakan Alharbi</div>
+      </div>
+    </div>
 
     <!-- ADMIN ONLY SECTION -->
     <div id="admin-section">
