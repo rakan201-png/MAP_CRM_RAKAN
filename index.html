@@ -207,49 +207,44 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
 }
 
 
-/* SEARCH BOX */
+/* SEARCH BOX — in header */
 #search-container{
-  position:absolute;
-  top:14px;
-  left:50%;
-  transform:translateX(-50%);
-  z-index:900;
   display:flex;
   gap:0;
-  width:min(380px, 88vw);
-  filter:drop-shadow(0 4px 16px rgba(0,0,0,0.5));
+  width:min(260px,30vw);
+  flex-shrink:1;
 }
 #search-input{
   flex:1;
-  background:rgba(13,17,23,0.88);
-  backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
-  border:1px solid rgba(88,166,255,0.35);
+  background:#21262d;
+  border:1px solid #30363d;
   border-right:none;
-  border-radius:10px 0 0 10px;
+  border-radius:6px 0 0 6px;
   color:#e6edf3;
-  padding:9px 14px;
-  font-size:13px;
+  padding:5px 10px;
+  font-size:12px;
   font-family:'Segoe UI',Tahoma,sans-serif;
   outline:none;
   direction:ltr;
-  letter-spacing:.3px;
+  min-width:0;
 }
-#search-input::placeholder{color:#8b949e;direction:rtl;text-align:right}
-#search-input:focus{border-color:#58a6ff;background:rgba(22,27,34,0.95)}
+#search-input::placeholder{color:#8b949e;direction:rtl;text-align:right;font-size:11px}
+#search-input:focus{border-color:#58a6ff;background:#2d333b}
 #search-btn{
-  background:linear-gradient(135deg,#1f6feb,#388bfd);
-  border:1px solid #388bfd;
-  border-radius:0 10px 10px 0;
+  background:#1f6feb;
+  border:1px solid #1f6feb;
+  border-radius:0 6px 6px 0;
   color:#fff;
-  padding:9px 14px;
+  padding:5px 10px;
   cursor:pointer;
-  font-size:14px;
+  font-size:13px;
   display:flex;align-items:center;justify-content:center;
   transition:background .15s;
-  white-space:nowrap;
+  flex-shrink:0;
 }
-#search-btn:hover{background:linear-gradient(135deg,#388bfd,#58a6ff)}
+#search-btn:hover{background:#388bfd}
+@media(max-width:900px){#search-container{width:min(180px,28vw)}}
+@media(max-width:650px){#search-container{display:none}}
 
 /* SEARCH RESULT MARKER PULSE */
 @keyframes pulse-ring{
@@ -273,26 +268,10 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
   animation:pulse-ring 1.2s ease-out infinite;
 }
 
-/* MY LOCATION BUTTON */
-#locate-btn{
-  position:absolute;
-  bottom:90px;
-  left:12px;
-  z-index:900;
-  width:38px;height:38px;
-  background:rgba(13,17,23,0.88);
-  backdrop-filter:blur(8px);
-  border:1px solid rgba(88,166,255,0.4);
-  border-radius:8px;
-  color:#58a6ff;
-  font-size:18px;
-  cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:all .2s;
-  box-shadow:0 2px 10px rgba(0,0,0,0.4);
-}
-#locate-btn:hover{background:#1f6feb;border-color:#58a6ff;color:#fff;transform:scale(1.05)}
-#locate-btn.locating{animation:spin .8s linear infinite;border-color:#3fb950;color:#3fb950}
+/* MY LOCATION BUTTON — inside layer-switcher as layer-btn */
+#locate-btn{border-color:#58a6ff!important;color:#58a6ff!important}
+#locate-btn:hover{background:#1f6feb!important;color:#fff!important}
+#locate-btn.locating{animation:spin .8s linear infinite;color:#3fb950!important;border-color:#3fb950!important}
 </style>
 </head>
 <body>
@@ -340,11 +319,17 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
     <button class="year-tab" data-year="2025" onclick="setYear(this)">2025</button>
     <button class="year-tab" data-year="2026" onclick="setYear(this)">2026</button>
   </div>
+  <div id="search-container">
+    <input id="search-input" type="text" placeholder="🔍 إحداثيات: 21.4858, 39.9563"
+           onkeydown="if(event.key==='Enter')searchCoords()">
+    <button id="search-btn" onclick="searchCoords()" title="بحث">🔍</button>
+  </div>
   <div id="header-btns">
     <div id="layer-switcher">
       <button class="layer-btn active" data-layer="dark" onclick="switchLayer(this)">🌑 مظلم</button>
       <button class="layer-btn" data-layer="satellite" onclick="switchLayer(this)">🛰️ قمر صناعي</button>
       <button class="layer-btn" data-layer="street" onclick="switchLayer(this)">🗺️ شوارع</button>
+      <button class="layer-btn" id="locate-btn" onclick="locateMe()" title="موقعي الحالي">📍</button>
     </div>
     <button class="icon-btn" id="admin-btn" onclick="openAdminModal()">🔐 مدير</button>
     <button class="icon-btn" id="logout-btn" onclick="adminLogout()" style="display:none;background:rgba(248,81,73,0.15);border-color:#f85149;color:#f85149">🚪 خروج</button>
@@ -355,15 +340,7 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
 <div id="main">
   <div id="map"></div>
 
-  <!-- Search Box -->
-  <div id="search-container">
-    <input id="search-input" type="text" placeholder="🔍 ابحث بالإحداثيات  مثال: 21.4858, 39.9563" 
-           onkeydown="if(event.key==='Enter')searchCoords()">
-    <button id="search-btn" onclick="searchCoords()" title="بحث">🔍</button>
-  </div>
 
-  <!-- Locate Me Button -->
-  <button id="locate-btn" onclick="locateMe()" title="موقعي الحالي">📍</button>
   <div id="map-watermark">
     <div class="wm-icon">✦</div>
     <div class="wm-text">
