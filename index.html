@@ -206,6 +206,93 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
   filter:drop-shadow(0 0 3px rgba(255,215,0,0.3));
 }
 
+
+/* SEARCH BOX */
+#search-container{
+  position:absolute;
+  top:14px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:900;
+  display:flex;
+  gap:0;
+  width:min(380px, 88vw);
+  filter:drop-shadow(0 4px 16px rgba(0,0,0,0.5));
+}
+#search-input{
+  flex:1;
+  background:rgba(13,17,23,0.88);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(88,166,255,0.35);
+  border-right:none;
+  border-radius:10px 0 0 10px;
+  color:#e6edf3;
+  padding:9px 14px;
+  font-size:13px;
+  font-family:'Segoe UI',Tahoma,sans-serif;
+  outline:none;
+  direction:ltr;
+  letter-spacing:.3px;
+}
+#search-input::placeholder{color:#8b949e;direction:rtl;text-align:right}
+#search-input:focus{border-color:#58a6ff;background:rgba(22,27,34,0.95)}
+#search-btn{
+  background:linear-gradient(135deg,#1f6feb,#388bfd);
+  border:1px solid #388bfd;
+  border-radius:0 10px 10px 0;
+  color:#fff;
+  padding:9px 14px;
+  cursor:pointer;
+  font-size:14px;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+  white-space:nowrap;
+}
+#search-btn:hover{background:linear-gradient(135deg,#388bfd,#58a6ff)}
+
+/* SEARCH RESULT MARKER PULSE */
+@keyframes pulse-ring{
+  0%{transform:scale(0.6);opacity:1}
+  100%{transform:scale(2.4);opacity:0}
+}
+.search-marker-pulse{
+  width:16px;height:16px;
+  background:#ffd700;
+  border-radius:50%;
+  border:2px solid #fff;
+  box-shadow:0 0 0 0 rgba(255,215,0,0.7);
+  position:relative;
+}
+.search-marker-pulse::after{
+  content:'';
+  position:absolute;
+  inset:-4px;
+  border-radius:50%;
+  background:rgba(255,215,0,0.4);
+  animation:pulse-ring 1.2s ease-out infinite;
+}
+
+/* MY LOCATION BUTTON */
+#locate-btn{
+  position:absolute;
+  bottom:90px;
+  left:12px;
+  z-index:900;
+  width:38px;height:38px;
+  background:rgba(13,17,23,0.88);
+  backdrop-filter:blur(8px);
+  border:1px solid rgba(88,166,255,0.4);
+  border-radius:8px;
+  color:#58a6ff;
+  font-size:18px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+  box-shadow:0 2px 10px rgba(0,0,0,0.4);
+}
+#locate-btn:hover{background:#1f6feb;border-color:#58a6ff;color:#fff;transform:scale(1.05)}
+#locate-btn.locating{animation:spin .8s linear infinite;border-color:#3fb950;color:#3fb950}
 </style>
 </head>
 <body>
@@ -267,6 +354,16 @@ select:focus,input[type=date]:focus{border-color:#58a6ff}
 
 <div id="main">
   <div id="map"></div>
+
+  <!-- Search Box -->
+  <div id="search-container">
+    <input id="search-input" type="text" placeholder="🔍 ابحث بالإحداثيات  مثال: 21.4858, 39.9563" 
+           onkeydown="if(event.key==='Enter')searchCoords()">
+    <button id="search-btn" onclick="searchCoords()" title="بحث">🔍</button>
+  </div>
+
+  <!-- Locate Me Button -->
+  <button id="locate-btn" onclick="locateMe()" title="موقعي الحالي">📍</button>
   <div id="map-watermark">
     <div class="wm-icon">✦</div>
     <div class="wm-text">
@@ -723,6 +820,132 @@ function handleUpload(event){
     }catch(err){status.style.color='#f85149';status.textContent='❌ خطأ: '+err.message;}
   };
   reader.readAsBinaryString(file);
+}
+
+
+// ─── SEARCH COORDS ────────────────────────────────────────────────────────────
+let searchMarker = null;
+
+function searchCoords(){
+  const raw = document.getElementById('search-input').value.trim();
+  if(!raw) return;
+
+  // Parse various formats: "21.4858, 39.9563" or "21.4858 39.9563" or "39.9563,21.4858"
+  const parts = raw.replace(/[,،\s]+/g, ' ').trim().split(' ').filter(Boolean);
+  if(parts.length < 2){
+    showSearchError('❌ أدخل إحداثيتين: خط العرض, خط الطول');
+    return;
+  }
+
+  let lat = parseFloat(parts[0]);
+  let lng = parseFloat(parts[1]);
+
+  if(isNaN(lat)||isNaN(lng)){showSearchError('❌ الإحداثيات غير صحيحة');return;}
+
+  // Auto-detect if lat/lng swapped (lng for Mecca is ~39-40, lat is ~21-22)
+  if(lat > 90 || (lat > 30 && lng < 30)){[lat,lng]=[lng,lat];}
+
+  if(lat<-90||lat>90||lng<-180||lng>180){showSearchError('❌ الإحداثيات خارج النطاق المسموح');return;}
+
+  // Remove old marker
+  if(searchMarker){map.removeLayer(searchMarker);}
+
+  // Create pulsing gold marker
+  const icon = L.divIcon({
+    html: `<div class="search-marker-pulse"></div>`,
+    className: '', iconSize:[16,16], iconAnchor:[8,8]
+  });
+
+  searchMarker = L.marker([lat,lng],{icon}).addTo(map);
+  searchMarker.bindPopup(
+    `<div style="direction:rtl;font-family:'Segoe UI',sans-serif">
+      <div style="font-size:12px;font-weight:700;color:#ffd700;margin-bottom:6px">📍 نتيجة البحث</div>
+      <div style="font-size:11px;color:#8b949e">خط العرض: <span style="color:#e6edf3">${lat.toFixed(6)}</span></div>
+      <div style="font-size:11px;color:#8b949e">خط الطول: <span style="color:#e6edf3">${lng.toFixed(6)}</span></div>
+      <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="gmaps-btn" style="margin-top:8px;display:inline-flex">📍 فتح في خرائط جوجل</a>
+      <div style="margin-top:6px"><button onclick="if(searchMarker){map.removeLayer(searchMarker);searchMarker=null;}" style="background:none;border:1px solid #f85149;color:#f85149;border-radius:4px;padding:3px 8px;cursor:pointer;font-size:10px;font-family:inherit">✕ إزالة العلامة</button></div>
+    </div>`,
+    {maxWidth:240}
+  ).openPopup();
+
+  map.flyTo([lat,lng], 16, {duration:1.2});
+}
+
+function showSearchError(msg){
+  const input = document.getElementById('search-input');
+  input.style.borderColor='#f85149';
+  input.placeholder=msg;
+  input.value='';
+  setTimeout(()=>{
+    input.style.borderColor='';
+    input.placeholder='🔍 ابحث بالإحداثيات  مثال: 21.4858, 39.9563';
+  },2500);
+}
+
+// ─── LOCATE ME ────────────────────────────────────────────────────────────────
+let locationMarker = null;
+let locationCircle = null;
+
+function locateMe(){
+  const btn = document.getElementById('locate-btn');
+  if(!navigator.geolocation){alert('المتصفح لا يدعم تحديد الموقع');return;}
+
+  btn.classList.add('locating');
+  btn.textContent='⏳';
+
+  navigator.geolocation.getCurrentPosition(
+    (pos)=>{
+      const lat=pos.coords.latitude, lng=pos.coords.longitude;
+      const acc=pos.coords.accuracy;
+
+      btn.classList.remove('locating');
+      btn.textContent='📍';
+
+      // Remove old
+      if(locationMarker) map.removeLayer(locationMarker);
+      if(locationCircle) map.removeLayer(locationCircle);
+
+      // Accuracy circle
+      locationCircle = L.circle([lat,lng],{
+        radius:acc,
+        color:'#58a6ff',
+        fillColor:'#1f6feb',
+        fillOpacity:0.12,
+        weight:1.5,
+        dashArray:'4 4'
+      }).addTo(map);
+
+      // Location marker
+      const icon = L.divIcon({
+        html:`<div style="position:relative">
+          <div style="width:14px;height:14px;background:#58a6ff;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px #58a6ff88;position:relative;z-index:1"></div>
+          <div style="position:absolute;inset:-5px;border-radius:50%;background:rgba(88,166,255,0.25);animation:pulse-ring 1.5s ease-out infinite"></div>
+        </div>`,
+        className:'',iconSize:[14,14],iconAnchor:[7,7]
+      });
+
+      locationMarker = L.marker([lat,lng],{icon}).addTo(map);
+      locationMarker.bindPopup(
+        `<div style="direction:rtl;font-family:'Segoe UI',sans-serif">
+          <div style="font-size:12px;font-weight:700;color:#58a6ff;margin-bottom:6px">🔵 موقعك الحالي</div>
+          <div style="font-size:11px;color:#8b949e">خط العرض: <span style="color:#e6edf3">${lat.toFixed(6)}</span></div>
+          <div style="font-size:11px;color:#8b949e">خط الطول: <span style="color:#e6edf3">${lng.toFixed(6)}</span></div>
+          <div style="font-size:10px;color:#8b949e;margin-top:4px">الدقة: ±${Math.round(acc)} متر</div>
+          <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="gmaps-btn" style="margin-top:8px;display:inline-flex">📍 فتح في خرائط جوجل</a>
+        </div>`,
+        {maxWidth:240}
+      ).openPopup();
+
+      map.flyTo([lat,lng], 15, {duration:1.5});
+    },
+    (err)=>{
+      btn.classList.remove('locating');
+      btn.textContent='📍';
+      const msgs={1:'❌ تم رفض الإذن للوصول للموقع',2:'❌ تعذر تحديد الموقع',3:'❌ انتهت مهلة تحديد الموقع'};
+      alert(msgs[err.code]||'❌ خطأ في تحديد الموقع');
+    },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:30000}
+  );
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
