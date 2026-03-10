@@ -1,8 +1,3 @@
-/**
- * مساعد الاتصالات الإدارية v3.0
- * Multi-Endpoint + Multi-Model + Auto Fallback
- */
-
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
@@ -16,182 +11,71 @@ const PORT = process.env.PORT || 8080;
 app.use(cors());
 app.use(express.json());
 
-// =======================================
-// جميع المسارات الممكنة للـ API
-// =======================================
-const GEMINI_CONFIGS = [
-  { version: 'v1',     model: 'gemini-1.5-flash'        },
-  { version: 'v1',     model: 'gemini-1.5-pro'           },
-  { version: 'v1',     model: 'gemini-1.0-pro'           },
-  { version: 'v1beta', model: 'gemini-1.5-flash'         },
-  { version: 'v1beta', model: 'gemini-1.5-flash-latest'  },
-  { version: 'v1beta', model: 'gemini-1.5-pro'           },
-  { version: 'v1beta', model: 'gemini-pro'               },
+// النماذج المتاحة فعلياً من المفتاح الجديد
+const MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
 ];
 
-// =======================================
-// دالة الاستدعاء مع Auto Fallback
-// =======================================
 async function callGemini(prompt, apiKey) {
-  const errors = [];
-
-  for (const cfg of GEMINI_CONFIGS) {
+  for (const model of MODELS) {
     try {
-      console.log(`🔄 جاري: ${cfg.version}/${cfg.model}`);
-
-      const url = `https://generativelanguage.googleapis.com/${cfg.version}/models/${cfg.model}:generateContent?key=${apiKey}`;
-
-      const response = await axios.post(url,
+      console.log(`🔄 جاري: ${model}`);
+      const res = await axios.post(
+        `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`,
         {
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { maxOutputTokens: 1000, temperature: 0.7 }
         },
-        { timeout: 20000 }
+        { timeout: 25000 }
       );
-
-      const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const text = res.data?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text) {
-        console.log(`✅ نجح: ${cfg.version}/${cfg.model}`);
-        return { text, model: cfg.model, version: cfg.version };
+        console.log(`✅ نجح: ${model}`);
+        return { text, model };
       }
-
     } catch (err) {
       const status = err.response?.status;
       const msg = err.response?.data?.error?.message || err.message;
-      console.log(`❌ ${cfg.version}/${cfg.model} → ${status}: ${msg}`);
-      errors.push({ ...cfg, status, error: msg });
-
-      // إذا كان 403 - مشكلة في المفتاح نفسه
-      if (status === 403) {
-        throw { type: 'FORBIDDEN', message: 'API Key غير مصرح له', errors };
-      }
+      console.log(`❌ ${model} → ${status}: ${msg}`);
+      if (status === 400 || status === 403) break;
     }
   }
-
-  throw { type: 'ALL_FAILED', message: 'فشلت جميع المسارات', errors };
+  throw new Error('فشلت جميع النماذج');
 }
 
-// =======================================
-// GET /
-// =======================================
-app.get('/', (req, res) => {
-  res.json({
-    status: '✅ يعمل',
-    version: '3.0.0',
-    api_key_set: !!process.env.GEMINI_API_KEY,
-    configs_available: GEMINI_CONFIGS.length,
-    endpoints: {
-      diagnose: 'GET /api/diagnose',
-      test: 'GET /api/test-gemini',
-      extract: 'POST /api/extract-data',
-      generate: 'POST /api/generate-reply'
-    }
-  });
-});
+app.get('/', (req, res) => res.json({
+  status: '✅ يعمل',
+  version: '3.0.0',
+  api_key_set: !!process.env.GEMINI_API_KEY,
+  endpoints: {
+    test: 'GET /api/test-gemini',
+    extract: 'POST /api/extract-data',
+    generate: 'POST /api/generate-reply'
+  }
+}));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 
-// =======================================
-// GET /api/diagnose
-// =======================================
-app.get('/api/diagnose', async (req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    return res.json({
-      verdict: '❌ GEMINI_API_KEY غير موجود في Railway Variables',
-      fix: 'أضف GEMINI_API_KEY في Railway → Variables'
-    });
-  }
-
-  const results = {
-    api_key_prefix: apiKey.substring(0, 12) + '...',
-    api_key_length: apiKey.length,
-    configs_tested: []
-  };
-
-  for (const cfg of GEMINI_CONFIGS) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/${cfg.version}/models/${cfg.model}:generateContent?key=${apiKey}`;
-      const response = await axios.post(url,
-        { contents: [{ parts: [{ text: 'hi' }] }], generationConfig: { maxOutputTokens: 5 } },
-        { timeout: 8000 }
-      );
-      const worked = !!response.data?.candidates?.[0];
-      results.configs_tested.push({
-        config: `${cfg.version}/${cfg.model}`,
-        status: worked ? '✅ يعمل' : '⚠️ رد فارغ'
-      });
-    } catch (err) {
-      results.configs_tested.push({
-        config: `${cfg.version}/${cfg.model}`,
-        status: '❌ فشل',
-        http: err.response?.status,
-        error: err.response?.data?.error?.message || err.message
-      });
-    }
-  }
-
-  const working = results.configs_tested.find(r => r.status.includes('✅'));
-  results.verdict = working
-    ? `✅ يعمل مع: ${working.config}`
-    : '❌ جميع المسارات فشلت';
-
-  if (!working) {
-    const firstError = results.configs_tested[0];
-    if (firstError?.http === 400 && firstError?.error?.includes('expired')) {
-      results.fix = 'المفتاح منتهي الصلاحية - أنشئ مفتاحاً جديداً من https://aistudio.google.com/app/apikey';
-    } else if (firstError?.http === 404) {
-      results.fix = 'النماذج غير متاحة لهذا المفتاح - تأكد من إنشاء المفتاح من AI Studio وليس Google Cloud';
-    }
-  }
-
-  res.json(results);
-});
-
-// =======================================
-// GET /api/test-gemini
-// =======================================
 app.get('/api/test-gemini', async (req, res) => {
   const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    return res.status(500).json({
-      success: false,
-      error: 'GEMINI_API_KEY غير موجود',
-      fix: 'أضف في Railway → Variables'
-    });
-  }
-
+  if (!apiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY غير موجود' });
   try {
-    const result = await callGemini('قل مرحباً بجملة واحدة', apiKey);
-    res.json({
-      success: true,
-      message: '✅ يعمل!',
-      model: result.model,
-      version: result.version,
-      response: result.text
-    });
+    const result = await callGemini('قل مرحباً بالعربية في جملة واحدة', apiKey);
+    res.json({ success: true, message: '✅ يعمل!', model: result.model, response: result.text });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: err.message,
-      details: err.errors,
-      fix: 'افتح /api/diagnose للتفاصيل'
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// =======================================
-// POST /api/extract-data
-// =======================================
 app.post('/api/extract-data', (req, res) => {
   try {
     const { text } = req.body;
     if (!text) return res.status(400).json({ success: false, error: 'لم يتم توفير نص' });
-
     const get = (regex) => { const m = text.match(regex); return m ? m[1]?.trim() : 'غير محدد'; };
-
     res.json({
       success: true,
       data: {
@@ -207,13 +91,9 @@ app.post('/api/extract-data', (req, res) => {
   }
 });
 
-// =======================================
-// POST /api/generate-reply
-// =======================================
 app.post('/api/generate-reply', async (req, res) => {
   const { data } = req.body;
   if (!data) return res.status(400).json({ success: false, error: 'لم يتم توفير البيانات' });
-
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY غير موجود' });
 
@@ -226,7 +106,7 @@ app.post('/api/generate-reply', async (req, res) => {
 - التاريخ: ${data.hijriDate || 'غير محدد'} هـ
 - الموضوع: ${data.subject || 'غير محدد'}
 
-اكتب ديباجة الرد الإداري:
+اكتب ديباجة الرد الإداري بهذا الترتيب الدقيق:
 
 إشارةً إلى خطاب سعادة ${data.position || '...'} رقم (${data.refNum || '...'}) وتاريخ ${data.hijriDate || '...'}هـ بشأن ${data.subject || '...'}،
 
@@ -240,23 +120,16 @@ app.post('/api/generate-reply', async (req, res) => {
     const result = await callGemini(prompt, apiKey);
     res.json({ success: true, reply: result.text, model: result.model });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message, fix: 'افتح /api/diagnose' });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// =======================================
-// Error Handlers
-// =======================================
 app.use((err, req, res, next) => res.status(500).json({ success: false, error: err.message }));
 app.use((req, res) => res.status(404).json({ success: false, error: `غير موجود: ${req.path}` }));
 
-// =======================================
-// Start
-// =======================================
 app.listen(PORT, () => {
   console.log(`✅ السيرفر: http://localhost:${PORT}`);
   console.log(`🔑 API Key: ${process.env.GEMINI_API_KEY ? '✅ موجود' : '❌ مفقود!'}`);
-  console.log(`📊 عدد المسارات: ${GEMINI_CONFIGS.length}`);
 });
 
 process.on('SIGTERM', () => process.exit(0));
